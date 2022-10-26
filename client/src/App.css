@@ -1,0 +1,7 @@
+@import url("./Components/Css/Login.css");
+@import url("./Components/Css/NavBar.css");
+@import url("https://fonts.googleapis.com/css2?family=Rubik:wght@405&display=swap");
+
+* {
+  font-family: "Rubik", sans-serif;
+}
