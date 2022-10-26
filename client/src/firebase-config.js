@@ -25,23 +25,3 @@ export const signInWithMicrosoft = () =>
       tenant: env.TENANT,
     })
   );
-
-// export const signInWithMicrosoft = () => {
-//   signInWithRedirect(
-//     auth,
-//     provider.setCustomParameters({
-//       prompt: "consent",
-//       login_hint: "",
-//       tenant: "c83f55a7-7fe8-4934-b759-09926430aef0",
-//     })
-//   )
-//     .then((result) => {
-//       console.log(result);
-//       localStorage.setItem("name", result.user.displayName);
-//       localStorage.setItem("email", result.user.email);
-//       localStorage.setItem("photoUrl", result.user.photoURL);
-//     })
-//     .catch((err) => {
-//       console.log(err);
-//     });
-// };
