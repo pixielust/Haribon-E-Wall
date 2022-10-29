@@ -14,7 +14,7 @@ export default function Home() {
     // onAuthStateChanged(auth, (currentUser) => {
     //   setUser(currentUser);
     // });
-
+    console.log(auth);
     setName(localStorage.getItem("name"));
     setEmail(localStorage.getItem("email"));
     setProfileURL(localStorage.getItem("photoUrl"));

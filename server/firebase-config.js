@@ -14,14 +14,21 @@ const serviceAccount = require("./haribon-e-wall-firebase-adminsdk-9q2vr-cdc71a0
 initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
 
-const writePost = async (publisher, post, time, isAnonymous) => {
+const writePost = async (publisher, post, time, isAnonymous, callback) => {
   const docRef = db.collection("posts").doc(publisher);
-  await docRef.set({
-    publisher: publisher,
-    post: post,
-    time: time,
-    isAnonymous: isAnonymous,
-  });
+  await docRef
+    .set({
+      publisher: publisher,
+      post: post,
+      time: time,
+      isAnonymous: isAnonymous,
+    })
+    .then(() => {
+      callback();
+    })
+    .catch((error) => {
+      return error;
+    });
 };
 
-module.exports = writePost;
+module.exports.writePost = writePost;
