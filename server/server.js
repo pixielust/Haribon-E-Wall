@@ -6,10 +6,8 @@ const { writePost } = require("./firebase-config");
 
 // console.log(process.env.DATABASE_URL);
 app.get("/", (req, res) => {
-  writeState = "failed";
-  writePost("Kurt1", "This is a message", "time", false, () => {
-    writeState = "success";
-    return res.send(writeState);
+  writePost("Kurt", "This is a message", false, (message) => {
+    return res.send(message);
   });
 });
 
