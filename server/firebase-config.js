@@ -7,14 +7,28 @@ const serviceAccount = require("./haribon-e-wall-firebase-adminsdk-9q2vr-cdc71a0
 initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
 
-const writePost = async (publisher, post, isAnonymous, callback) => {
-  const docRef = db.collection("posts");
+const writePost = async (
+  publisher,
+  message,
+  isAnonymous,
+  upVote,
+  downVote,
+  isSolved,
+  tags,
+  category,
+  callback
+) => {
+  const docRef = db.collection("categories").doc(category).collection("posts");
   await docRef
     .add({
       publisher: publisher,
-      post: post,
-      time: firebase.firestore.FieldValue.serverTimestamp(),
+      message: message,
+      timeDate: firebase.firestore.FieldValue.serverTimestamp(),
       isAnonymous: isAnonymous,
+      upVote: upVote,
+      downVote: downVote,
+      isSolved: isSolved,
+      tags: tags,
     })
     .then(() => {
       res = "Success";
@@ -29,10 +43,16 @@ const addComment = async (
   commenter,
   reply,
   isAnonymous,
-  whatPost,
+  category,
+  post,
   callback
 ) => {
-  const docRef = db.collection("posts").doc(whatPost).collection("replies");
+  const docRef = db
+    .collection("categories")
+    .doc(category)
+    .collection("posts")
+    .doc(post)
+    .collection("replies");
   await docRef
     .add({
       commenter: commenter,
@@ -49,8 +69,13 @@ const addComment = async (
   callback(res);
 };
 
-const deletePost = async (documentId, collectionPath) => {
-  await db.collection(collectionPath).doc(documentId).delete();
+const deletePost = async (category, post) => {
+  await db
+    .collection("categories")
+    .doc(category)
+    .collection("posts")
+    .doc(post)
+    .delete();
 };
 
 const deleteComment = async (postDocumentId, replyDocumentId) => {
@@ -62,26 +87,10 @@ const deleteComment = async (postDocumentId, replyDocumentId) => {
     .delete();
 };
 
-// const readAllPost = async () => {
-//   const docRef = db.collection("posts");
-//   const snapshot = await docRef.get();
-
-//   snapshot.forEach((posts) => {
-//     callback = (data) => {
-//       data = posts;
-//       return data;
-//     };
-//     // console.log(
-//     //   posts.id,
-//     //   "=>",
-//     //   posts._fieldsProto.post.stringValue,
-//     //   "by: ",
-//     //   posts._fieldsProto.publisher.stringValue
-//     // );
-//   });
-//   // console.log(data);
-//   // console.log(data.length);
-// };
+const rankData = async (data) => {
+  // TODO: use reddit algorithm
+  return data;
+};
 
 module.exports.writePost = writePost;
 module.exports.addComment = addComment;
@@ -89,3 +98,4 @@ module.exports.addComment = addComment;
 module.exports.db = db;
 module.exports.deletePost = deletePost;
 module.exports.deleteComment = deleteComment;
+module.exports.rankData = rankData;
