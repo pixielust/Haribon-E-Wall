@@ -11,6 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@firebase/database": "^0.13.10",
+    "@firebase/firestore": "^3.7.2",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "firebase-admin": "^11.2.0",

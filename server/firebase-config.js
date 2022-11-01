@@ -1,11 +1,18 @@
 const { initializeApp, cert } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const { getFirestore, updateDoc } = require("firebase-admin/firestore");
 const firebase = require("firebase-admin");
 
 const serviceAccount = require("./haribon-e-wall-firebase-adminsdk-9q2vr-cdc71a0b9f.json");
 
 initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
+
+// const updateTimestamp = async () => {
+//   const docRef = doc(db, "objects", "some-id");
+//   await updateDoc(docRef, {
+//     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+//   });
+// };
 
 const writePost = async (
   publisher,
@@ -39,7 +46,7 @@ const writePost = async (
   callback(res);
 };
 
-const addComment = async (
+const writeComment = async (
   commenter,
   reply,
   isAnonymous,
@@ -78,24 +85,21 @@ const deletePost = async (category, post) => {
     .delete();
 };
 
-const deleteComment = async (postDocumentId, replyDocumentId) => {
+const deleteComment = async (category, post, reply) => {
   await db
+    .collection("categories")
+    .doc(category)
     .collection("posts")
-    .doc(postDocumentId)
+    .doc(post)
     .collection("replies")
-    .doc(replyDocumentId)
+    .doc(reply)
     .delete();
 };
 
-const rankData = async (data) => {
-  // TODO: use reddit algorithm
-  return data;
-};
-
 module.exports.writePost = writePost;
-module.exports.addComment = addComment;
+module.exports.writeComment = writeComment;
 // module.exports.readAllPost = readAllPost;
 module.exports.db = db;
 module.exports.deletePost = deletePost;
 module.exports.deleteComment = deleteComment;
-module.exports.rankData = rankData;
+// module.exports.updateTimestamp = updateTimestamp;

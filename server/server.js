@@ -1,14 +1,17 @@
 require("dotenv").config();
+const firebase = require("firebase-admin");
+
 const express = require("express");
 const app = express();
+
 const PORT = process.env.PORT;
 const {
   writePost,
   db,
   deletePost,
-  addComment,
+  writeComment,
   deleteComment,
-  rankData,
+  updateTimestamp,
 } = require("./firebase-config");
 
 // console.log(process.env.DATABASE_URL);
@@ -28,9 +31,9 @@ app.get("/writePost", async (req, res) => {
   );
 });
 
-app.get("/addComment", async (req, res) => {
-  const postId = "p5tG9w8mwJnznAqnLeu2"; // get the post id from client
-  await addComment(
+app.get("/writeComment", async (req, res) => {
+  const postId = "DoYMdNkAOkFCEiNWIcQ2"; // get the post id from client
+  await writeComment(
     "Kurt",
     "This is a reply",
     true,
@@ -56,8 +59,8 @@ app.get("/getAllPost", async (req, res) => {
     .doc("personal-concerns")
     .collection("posts");
 
-  const snapshotAcad = await docRefAcademicConcerns.get();
-  snapshotAcad.forEach((post) => {
+  const snapshotAcademic = await docRefAcademicConcerns.get();
+  snapshotAcademic.forEach((post) => {
     data.push(post);
   });
 
@@ -66,10 +69,42 @@ app.get("/getAllPost", async (req, res) => {
     data.push(post);
   });
 
-  rankData(data)
-    .then(() => {
-      res.send(JSON.stringify(data.length));
+  const rankedData = async (data) => {
+    console.log("total query: ", data.length);
+    return data;
+  };
+
+  await rankedData(data)
+    .then((result) => {
+      // updateTimestamp();
+
+      result.forEach((item) => {
+        const timeNow = new Date(
+          firebase.firestore.Timestamp.now().seconds * 1000
+        );
+        const dateConvert = new Date(
+          item._fieldsProto.timeDate.timestampValue.seconds * 1000
+        );
+
+        const timeDiff = new Date((dateConvert - timeNow) * 1000);
+        // TODO: Fix time difference
+        console.log(
+          item._ref._path.segments.slice(-1)[0],
+          " => ",
+          item._fieldsProto.upVote.integerValue,
+          " => ",
+          item._fieldsProto.downVote.integerValue,
+          " => ",
+          dateConvert,
+          " => ",
+          timeNow,
+          " => ",
+          timeDiff
+        );
+      });
+      res.send(JSON.stringify(result.length));
     })
+
     .catch((err) => {
       res.send(err.message);
     });
@@ -90,9 +125,10 @@ app.get("/deletePost", async (req, res) => {
 });
 
 app.get("/deleteComment", async (req, res) => {
-  const postId = "GN0MfmMsraDiW6sV4esv";
-  const commentId = "R8V3uaa5Ycr9BmTfnOLC";
-  await deleteComment(postId, commentId)
+  const category = "academic-concerns";
+  const postId = "DoYMdNkAOkFCEiNWIcQ2";
+  const commentId = "7HnoINUYlpXS6udMgmvU";
+  await deleteComment(category, postId, commentId)
     .then(() => {
       res.send("A document with ID: " + commentId + " has been deleted");
     })
@@ -102,7 +138,9 @@ app.get("/deleteComment", async (req, res) => {
 });
 
 // TODO:
-app.get("/getAllTagsByPopularity", async (req, res) => {});
+app.get("/getAllTags", async (req, res) => {});
+app.get("/getAllPostsByTags", async (req, res) => {});
+app.get("/getAllPostsByCategory", async (req, res) => {});
 app.get("/upVote", async (req, res) => {});
 app.get("/downVote", async (req, res) => {});
 app.get("/get", async (req, res) => {});
