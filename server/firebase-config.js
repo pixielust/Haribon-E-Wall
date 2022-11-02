@@ -37,8 +37,8 @@ const writePost = async (
       isSolved: isSolved,
       tags: tags,
     })
-    .then(() => {
-      res = "Success";
+    .then((result) => {
+      res = result;
     })
     .catch((err) => {
       res = err.message;
