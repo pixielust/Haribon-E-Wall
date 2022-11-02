@@ -88,35 +88,65 @@ app.get("/getAllPost", async (req, res) => {
         item._fieldsProto.timeDate.timestampValue.seconds * 1000
       );
 
-      const hourDifference =
-        (timeNow.getTime() - dateConvert.getTime()) / 1000 / 3600;
+      //! Reddit Algorithm: https://moz.com/blog/reddit-stumbleupon-delicious-and-hacker-news-algorithms-exposed
+      const secondsDifference = // ts
+        (timeNow.getTime() - dateConvert.getTime()) / 1000;
+      let votePoint = // x
+        item._fieldsProto.upVote.integerValue -
+        item._fieldsProto.downVote.integerValue;
+      let yValue = 0;
+      let zValue = 0;
 
-      const votePoint =
-        (item._fieldsProto.upVote.integerValue -
-          item._fieldsProto.downVote.integerValue -
-          1) /
-        Math.pow(hourDifference + 2, 1.5);
-      item._fieldsProto.votePoint = votePoint;
-      console.log(
-        item._ref._path.segments.slice(-1)[0],
-        " => ",
-        item._fieldsProto.upVote.integerValue,
-        " => ",
-        item._fieldsProto.downVote.integerValue,
-        " => ",
-        dateConvert,
-        " => ",
-        timeNow,
-        " => ",
-        votePoint
-      );
+      if (votePoint > 0) {
+        yValue = 1;
+      } else if ((votePoint = 0)) {
+        yValue = 0;
+      } else {
+        yValue = -1;
+      }
+
+      if (Math.abs(votePoint) >= 1) {
+        zValue = Math.abs(votePoint);
+      } else {
+        zValue = 1;
+      }
+
+      const rating =
+        Math.log10(zValue) + (yValue * parseInt(secondsDifference, 10)) / 45000;
+
+      // const votePoint =
+      //   (item._fieldsProto.upVote.integerValue -
+      //     item._fieldsProto.downVote.integerValue -
+      //     1) /
+      //   Math.pow(hourDifference + 2, 1.5);
+
+      item._fieldsProto.rating = rating;
+      // console.log(
+      //   item._ref._path.segments.slice(-1)[0],
+      //   " => ",
+      //   item._fieldsProto.upVote.integerValue,
+      //   " => ",
+      //   item._fieldsProto.downVote.integerValue,
+      //   " => ",
+      //   dateConvert,
+      //   " => ",
+      //   timeNow,
+      //   " => ",
+      //   rating
+      // );
     });
+
+    data.sort((a, b) =>
+      a._fieldsProto.rating > b._fieldsProto.rating ? 1 : -1
+    );
+
     return data;
   };
 
   await rankedData(data)
     .then((result) => {
-      res.send(JSON.stringify(result[0]));
+      // now returns a sorted ranked data
+      res.send(JSON.stringify(result));
     })
     .catch((err) => {
       res.send(err.message);
