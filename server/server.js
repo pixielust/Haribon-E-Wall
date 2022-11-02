@@ -4,15 +4,23 @@ const firebase = require("firebase-admin");
 const express = require("express");
 const app = express();
 
+const Filter = require("bad-words"),
+  filter = new Filter({
+    regex: /\*|\.|$/gi,
+    replaceRegex: /[A-Za-z0-9가-힣_]/g,
+  });
+
 const PORT = process.env.PORT;
+const { someBadWords } = require("./someBadWords");
 const {
   writePost,
   db,
   deletePost,
   writeComment,
   deleteComment,
-  updateTimestamp,
 } = require("./firebase-config");
+
+filter.addWords(...someBadWords);
 
 // console.log(process.env.DATABASE_URL);
 
@@ -55,6 +63,8 @@ app.get("/writeComment/:isAnonymous/:commenter/:category", async (req, res) => {
   });
 });
 
+//? get All posts
+//? this endpoint can be used in getting ranked posts from categories and tags
 app.get("/getAllPost", async (req, res) => {
   const data = [];
   const docRefAcademicConcerns = db
@@ -119,7 +129,10 @@ app.get("/getAllPost", async (req, res) => {
       //     item._fieldsProto.downVote.integerValue -
       //     1) /
       //   Math.pow(hourDifference + 2, 1.5);
-
+      //! filter profanities
+      item._fieldsProto.message.stringValue = filter.clean(
+        item._fieldsProto.message.stringValue
+      );
       item._fieldsProto.rating = rating;
       // console.log(
       //   item._ref._path.segments.slice(-1)[0],
@@ -136,8 +149,9 @@ app.get("/getAllPost", async (req, res) => {
       // );
     });
 
-    data.sort((a, b) =>
-      a._fieldsProto.rating > b._fieldsProto.rating ? 1 : -1
+    data.sort(
+      //? sort data, descending
+      (a, b) => (a._fieldsProto.rating < b._fieldsProto.rating ? 1 : -1)
     );
 
     return data;
@@ -147,11 +161,24 @@ app.get("/getAllPost", async (req, res) => {
     .then((result) => {
       // now returns a sorted ranked data
       res.send(JSON.stringify(result));
+      result.forEach((item) => {
+        console.log(
+          item._ref._path.segments.slice(-1)[0],
+          " => ",
+          item._fieldsProto.upVote.integerValue,
+          " => ",
+          item._fieldsProto.downVote.integerValue,
+          " => ",
+          item._fieldsProto.rating,
+          " => ",
+          item._fieldsProto.message.stringValue
+        );
+      });
     })
     .catch((err) => {
       res.send(err.message);
     });
-
+  // TODO: block profanity
   // TODO: Save data to the local storage in react
 });
 
