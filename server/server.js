@@ -18,6 +18,8 @@ const {
   deletePost,
   writeComment,
   deleteComment,
+  rankedData,
+  getAllData,
 } = require("./firebase-config");
 
 filter.addWords(...someBadWords);
@@ -25,9 +27,9 @@ filter.addWords(...someBadWords);
 // console.log(process.env.DATABASE_URL);
 
 //? write post ->
-// http://localhost:3001/writePost/Kurt%20Jacob%20E.%20Urquico/hi%20message/true/academic-concerns?tags=cet%20test%20exam
+// http://localhost:3001/writePost/Kurt%20Jacob%20E.%20Urquico/hi%20message/true/academic-concerns/kjeu2020@plm.edu.ph?tags=cet%20test%20exam
 app.get(
-  "/writePost/:publisher/:message/:isAnonymous/:category",
+  "/writePost/:publisher/:message/:isAnonymous/:category/:email",
   async (req, res) => {
     const tagList = req.query.tags.split(" ");
     await writePost(
@@ -38,6 +40,7 @@ app.get(
       0,
       false,
       tagList,
+      req.params.email,
       req.params.category,
       (postRes) => {
         res.send(postRes);
@@ -47,116 +50,31 @@ app.get(
 );
 
 //? write comment ->
-// http://localhost:3001/writeComment/true/kurt%20jacob%20urquico/academic-concerns?postId=2FAwOttAjc1lS2qzv3zO&message=hell
-app.get("/writeComment/:isAnonymous/:commenter/:category", async (req, res) => {
-  await writeComment(
-    req.params.commenter,
-    req.query.message,
-    req.params.isAnonymous,
-    req.params.category,
-    req.query.postId,
-    (comRes) => {
-      res.send(comRes);
-    }
-  ).catch((err) => {
-    res.send(err.message);
-  });
-});
+// http://localhost:3001/writeComment/true/kurt%20jacob%20urquico/academic-concerns/kjeu@plm.edu.ph?postId=2FAwOttAjc1lS2qzv3zO&message=hell
+app.get(
+  "/writeComment/:isAnonymous/:commenter/:category/:email",
+  async (req, res) => {
+    await writeComment(
+      req.params.commenter,
+      req.query.message,
+      req.params.isAnonymous,
+      req.params.category,
+      req.query.postId,
+      req.params.email,
+      (comRes) => {
+        res.send(comRes);
+      }
+    ).catch((err) => {
+      res.send(err.message);
+    });
+  }
+);
 
 //? get All posts
 //? this endpoint can be used in getting ranked posts from categories and tags
 app.get("/getAllPost", async (req, res) => {
   const data = [];
-  const docRefAcademicConcerns = db
-    .collection("categories")
-    .doc("academic-concerns")
-    .collection("posts");
-
-  const docRefPersonalConcerns = db
-    .collection("categories")
-    .doc("personal-concerns")
-    .collection("posts");
-
-  const snapshotAcademic = await docRefAcademicConcerns.get();
-  snapshotAcademic.forEach((post) => {
-    // data["votePoint"] = 0;
-    data.push(post);
-  });
-
-  const snapshotPersonal = await docRefPersonalConcerns.get();
-  snapshotPersonal.forEach((post) => {
-    // data["votePoint"] = 0;
-    data.push(post);
-  });
-
-  const rankedData = async (data) => {
-    data.forEach((item) => {
-      const timeNow = new Date(
-        firebase.firestore.Timestamp.now().seconds * 1000
-      );
-      const dateConvert = new Date(
-        item._fieldsProto.timeDate.timestampValue.seconds * 1000
-      );
-
-      //! Reddit Algorithm: https://moz.com/blog/reddit-stumbleupon-delicious-and-hacker-news-algorithms-exposed
-      const secondsDifference = // ts
-        (timeNow.getTime() - dateConvert.getTime()) / 1000;
-      let votePoint = // x
-        item._fieldsProto.upVote.integerValue -
-        item._fieldsProto.downVote.integerValue;
-      let yValue = 0;
-      let zValue = 0;
-
-      if (votePoint > 0) {
-        yValue = 1;
-      } else if ((votePoint = 0)) {
-        yValue = 0;
-      } else {
-        yValue = -1;
-      }
-
-      if (Math.abs(votePoint) >= 1) {
-        zValue = Math.abs(votePoint);
-      } else {
-        zValue = 1;
-      }
-
-      const rating =
-        Math.log10(zValue) + (yValue * parseInt(secondsDifference, 10)) / 45000;
-
-      // const votePoint =
-      //   (item._fieldsProto.upVote.integerValue -
-      //     item._fieldsProto.downVote.integerValue -
-      //     1) /
-      //   Math.pow(hourDifference + 2, 1.5);
-      //! filter profanities
-      item._fieldsProto.message.stringValue = filter.clean(
-        item._fieldsProto.message.stringValue
-      );
-      item._fieldsProto.rating = rating;
-      // console.log(
-      //   item._ref._path.segments.slice(-1)[0],
-      //   " => ",
-      //   item._fieldsProto.upVote.integerValue,
-      //   " => ",
-      //   item._fieldsProto.downVote.integerValue,
-      //   " => ",
-      //   dateConvert,
-      //   " => ",
-      //   timeNow,
-      //   " => ",
-      //   rating
-      // );
-    });
-
-    data.sort(
-      //? sort data, descending
-      (a, b) => (a._fieldsProto.rating < b._fieldsProto.rating ? 1 : -1)
-    );
-
-    return data;
-  };
-
+  await getAllData(data);
   await rankedData(data)
     .then((result) => {
       // now returns a sorted ranked data
@@ -171,14 +89,15 @@ app.get("/getAllPost", async (req, res) => {
           " => ",
           item._fieldsProto.rating,
           " => ",
-          item._fieldsProto.message.stringValue
+          item._fieldsProto.message.stringValue,
+          " => ",
+          item._fieldsProto.email.stringValue
         );
       });
     })
     .catch((err) => {
       res.send(err.message);
     });
-  // TODO: block profanity
   // TODO: Save data to the local storage in react
 });
 
@@ -209,9 +128,38 @@ app.get("/deleteComment", async (req, res) => {
 });
 
 // TODO:
-app.get("/getAllTags", async (req, res) => {});
-app.get("/getAllPostsByTags", async (req, res) => {});
-app.get("/getAllPostsByCategory", async (req, res) => {});
+//? getAllPostsByTags, and getAllPostsByCategory are sub endpoints from getAllPosts
+//? getAllPostsByTags => only presents the post with specific user-selected tag, filter data so that there is no repeating tags
+//? getAllPostByCategory => only presents the post with specific category
+
+app.get("/getAllTags", async (req, res) => {
+  const data = [];
+  const tags = [];
+  const countTag = {};
+  await getAllData(data);
+  await rankedData(data)
+    .then((result) => {
+      // now returns a sorted ranked data
+      for (let i = 0; i < result.length; i++) {
+        for (
+          let j = 0;
+          j < result[i]._fieldsProto.tags.arrayValue.values.length;
+          j++
+        ) {
+          tags.push(
+            result[i]._fieldsProto.tags.arrayValue.values[j].stringValue
+          );
+        }
+      }
+      tags.forEach((tag) => {
+        countTag[tag] = (countTag[tag] || 0) + 1;
+      });
+      res.send(JSON.stringify(countTag));
+    })
+    .catch((err) => {
+      res.send(err.message);
+    });
+});
 app.get("/upVote", async (req, res) => {});
 app.get("/downVote", async (req, res) => {});
 app.get("/get", async (req, res) => {});
